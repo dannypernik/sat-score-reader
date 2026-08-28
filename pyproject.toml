@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sat-score-reader"
+version = "1.0.0"
+description = "Read College Board SAT/PSAT practice-test PDFs into structured scores"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "Danny Pernik" }]
+
+# The reader works off pdfplumber's word bounding boxes rather than its
+# line-clustered text, so extract_words() behaviour is load-bearing. Floor at
+# the version both apps are verified against; cap below the next major.
+dependencies = ["pdfplumber>=0.11.4,<0.12"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
