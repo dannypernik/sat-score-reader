@@ -117,15 +117,21 @@ def get_student_answers(score_details_file_path):
   # unambiguously. Their siblings ('All', 'Correct', 'Answer', and a bare
   # 'Math' that would relabel the section) are words that do occur in real
   # rows, which is why the whole line has to go rather than the marker word.
-  table_chrome = {'Section', 'Actions', 'Questions'}
+  # 'Question' and 'Answer' are the header's own labels ('Answer' being the
+  # wrapped second line of "Correct Answer" / "Your Answer"). Left in, they land
+  # in the band of the first row on a page and get glued onto its answer key.
+  table_chrome = {'Section', 'Actions', 'Questions', 'Question', 'Answer'}
   # Icon-font glyphs (the header's sort arrows) live in the Private Use Area
   # and carry no text. They don't reliably share a line with the header words,
-  # so drop them per-word rather than per-line.
-  icon_re = re.compile(r'^[\ue000-\uf8ff]+$')
+  # and sometimes fuse onto one ('Question<glyph>'), so strip them from every
+  # word's text and drop whatever is left empty, rather than filtering per-line.
+  icon_re = re.compile(r'[\ue000-\uf8ff]+')
   all_words = []
   cum_offset = 0
   for p in pages:
     words = p.extract_words()
+    for w in words:
+      w['text'] = icon_re.sub('', w['text'])
     # The running header/timestamp and footer/page-number are each one text
     # line; drop every word on that line, not just the one matching noise_re,
     # since sibling words on the same line don't themselves start with
@@ -133,7 +139,7 @@ def get_student_answers(score_details_file_path):
     noise_tops = {round(w['top'], 1) for w in words
                   if noise_re.match(w['text']) or w['text'] in table_chrome}
     for w in words:
-      if round(w['top'], 1) in noise_tops or icon_re.match(w['text']):
+      if round(w['top'], 1) in noise_tops or not w['text']:
         continue
       all_words.append({
         'text': w['text'],

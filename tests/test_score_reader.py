@@ -199,3 +199,39 @@ def test_parse_student_name_returns_none_without_the_label():
 
 def test_parse_student_name_returns_none_when_blank():
     assert parse_student_name('Name: \nrest') is None
+
+
+# --- repeated table header must not leak into a row's answer key ---------------
+
+class _FakePage:
+    height = 792
+
+    def __init__(self, words):
+        self._words = words
+
+    def extract_text(self):
+        return 'My Tests / SAT Practice 8 - July 11, 2026'
+
+    def extract_words(self):
+        return [dict(text=t, x0=x, top=top) for t, x, top in self._words]
+
+
+def test_repeated_header_words_do_not_leak_into_first_row_answer(monkeypatch):
+    from sat_score_reader import details
+
+    header = [('Question', 24, 12.0), ('Section', 96, 12.7), ('Correct', 192, 12.7),
+              ('Your', 281, 12.7), ('Actions', 362, 12.7), ('', 576, 12.0),
+              ('Answer', 192, 30.7), ('Answer', 281, 30.7)]
+    def row(n, top, answer):
+        return [(str(n), 24, top), ('Math', 96, top), (answer + ';', 281, top),
+                ('Correct', 294, top), ('Review', 380, top), (answer, 192, top)]
+
+    # The header repeats at the top of every page, so row 2 -- the first on page
+    # two -- is the one whose band reaches back up into it.
+    class _Pdf:
+        pages = [_FakePage(header + row(1, 700, 'C')), _FakePage(header + row(2, 69, 'D'))]
+
+    monkeypatch.setattr(details.pdfplumber, 'open', lambda path: _Pdf())
+    monkeypatch.setattr(details, 'check_completeness', lambda *a: None)
+    data = details.get_student_answers('unused.pdf')
+    assert data['answers']['math']['1']['2']['correct_answer'] == 'D'
