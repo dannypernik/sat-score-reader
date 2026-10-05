@@ -25,7 +25,7 @@ from .details import (
 )
 from .report import get_data_from_score_report, parse_student_name
 
-__version__ = '1.0.0'
+__version__ = '1.1.1'
 
 __all__ = [
     'ANSWER_KEYS',
